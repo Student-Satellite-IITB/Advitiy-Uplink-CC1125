@@ -27,7 +27,8 @@ main.d main.o: .././main.c \
  .././USART.h .././avr_compiler.h \
  c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\lib\gcc\avr\5.4.0\include\stdbool.h \
  c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\pgmspace.h \
- .././usart.c .././pmic_driver.h .././spi_driver.h .././spi_driver.c
+ .././usart.c .././pmic_driver.h .././spi_driver.h .././spi_driver.c \
+ .././cc112x_spi.h
 
 c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\io.h:
 
@@ -100,3 +101,5 @@ c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\
 .././spi_driver.h:
 
 .././spi_driver.c:
+
+.././cc112x_spi.h:

@@ -25,6 +25,8 @@
 #include "pmic_driver.h"
 #include "spi_driver.h"
 #include "spi_driver.c"
+#include "cc112x_spi.h"
+//#include "cc112x_serial_mode_reg_config.h"
 //#include <uart.c>
 //Global Variable
 unsigned char data_transmit[61],data_receive[60] ,transmit_enable=0,receive_enable=1,SWITCH[8]="$SWITCH",switch_num=0,transmit_check=0;
@@ -66,6 +68,9 @@ bool success;
 #define CC_SCLK		7	//7   // (pin8 of cc):-> clock input
 
 // CC2500/CC1100/CC1101 STROBE, CONTROL AND STATUS REGISTER
+
+
+/*
 #define CCxxx0_IOCFG2       0x00        // GDO2 output pin configuration
 #define CCxxx0_IOCFG1       0x01        // GDO1 output pin configuration
 #define CCxxx0_IOCFG0       0x02        // GDO0 output pin configuration
@@ -113,7 +118,7 @@ bool success;
 #define CCxxx0_TEST2        0x2C        // Various test settings
 #define CCxxx0_TEST1        0x2D        // Various test settings
 #define CCxxx0_TEST0        0x2E        // Various test settings
-
+*/
 // Strobe commands
 #define CCxxx0_SRES         0x30        // Reset chip.
 #define CCxxx0_SFSTXON      0x31        // Enable and calibrate frequency synthesizer (if MCSM0.FS_AUTOCAL=1).
@@ -160,27 +165,12 @@ bool success;
 // RF_SETTINGS is a data structure which contains all relevant CCxxx0 registers
 typedef struct RF_SETTINGS {
 	// Rf settings for CC1101
-	unsigned char  IOCFG0;          //GDO0 Output Pin Configuration
-	unsigned char  FIFOTHR;         //RX FIFO and TX FIFO Thresholds
-	unsigned char  PKTCTRL0;        //Packet Automation Control
-	unsigned char  FSCTRL1;         //Frequency Synthesizer Control
-	unsigned char  FREQ2;           //Frequency Control Word, High Byte
-	unsigned char  FREQ1;           //Frequency Control Word, Middle Byte
-	unsigned char  FREQ0;           //Frequency Control Word, Low Byte
-	unsigned char  MDMCFG4;         //Modem Configuration
-	unsigned char  MDMCFG3;         //Modem Configuration
-	unsigned char  MDMCFG2;         //Modem Configuration
-	unsigned char  DEVIATN;         //Modem Deviation Setting
-	unsigned char  MCSM0;           //Main Radio Control State Machine Configuration
-	unsigned char  FOCCFG;          //Frequency Offset Compensation Configuration
-	unsigned char  WORCTRL;         //Wake On Radio Control
-	unsigned char  FSCAL3;          //Frequency Synthesizer Calibration
-	unsigned char  FSCAL2;          //Frequency Synthesizer Calibration
-	unsigned char  FSCAL1;          //Frequency Synthesizer Calibration
-	unsigned char  FSCAL0;          //Frequency Synthesizer Calibration
-	unsigned char  TEST2;           //Various Test Settings
-	unsigned char  TEST1;           //Various Test Settings
-	unsigned char  TEST0;           //Various Test Settings
+	unsigned char  SYNC_CFG1;          
+	unsigned char  MODCFG_DEV_E;
+	unsigned char  FS_CFG;
+	unsigned char  FREQ2;
+	unsigned char  FREQ1;
+	unsigned char  FREQ0;
 } RF_SETTINGS;
 
 unsigned char ccxxx0_Strobe(unsigned char);
@@ -211,7 +201,7 @@ void ccxxx0_PowerOnReset();
 // Power on reset. The manual reset is choosed.
 //The exact details of manual reset on page 51 datasheet.
 
-void ccxxx0_Setup(const RF_SETTINGS*);
+void ccxxx0_Setup();//const RF_SETTINGS*);
 // Write all the RF Settings Registers one by one. And echo to Computer using USART
 
 void SPI_Master_Init(void);
@@ -287,31 +277,17 @@ void SPI_Master_Init()
 /* CRC autoflush = false */
 /* PA ramping = false */
 /* TX power = 10 */
-RF_SETTINGS rfSettings = {
-	0X06,        //IOCFG0      GDO0 Output Pin Configuration
-	0X4F,        //FIFOTHR     RX FIFO and TX FIFO Thresholds
-	0X05,        //PKTCTRL0    Packet Automation Control
-	0X06,        //FSCTRL1     Frequency Synthesizer Control
-	0X10,        //FREQ2       Frequency Control Word, High Byte
-	0XD3,        //FREQ1       Frequency Control Word, Middle Byte
-	0X40,        //FREQ0       Frequency Control Word, Low Byte
-	0XF8,        //MDMCFG4     Modem Configuration
-	0X83,        //MDMCFG3     Modem Configuration
-	0X43,        //MDMCFG2     Modem Configuration
-	0X15,        //DEVIATN     Modem Deviation Setting
-	0X18,        //MCSM0       Main Radio Control State Machine Configuration
-	0X16,        //FOCCFG      Frequency Offset Compensation Configuration
-	0XFB,        //WORCTRL     Wake On Radio Control
-	0XE9,        //FSCAL3      Frequency Synthesizer Calibration
-	0X2A,        //FSCAL2      Frequency Synthesizer Calibration
-	0X00,        //FSCAL1      Frequency Synthesizer Calibration
-	0X1F,        //FSCAL0      Frequency Synthesizer Calibration
-	0X81,        //TEST2       Various Test Settings
-	0X35,        //TEST1       Various Test Settings
-	0X09,        //TEST0       Various Test Settings
+
+/*RF_SETTINGS rfSettings = {
+	0x08;			// SYNC_CFG1;
+	0x29;			// MODCFG_DEV_E;
+	0x0B;			// FS_CFG;
+	0x6D;			// FREQ2;
+	0x6C;			// FREQ1;
+	0xCB;			// FREQ0;
 
 };
-
+*/
 
 
 // PATABLE (0 dBm output power) // Page number 60 CC1101 datasheet
@@ -441,7 +417,7 @@ void ccxxx0_PowerOnReset() // Manual Reset		// - DONE
 
 	_delay_us(50);
 
-    SPIC_DATA = CCxxx0_SRES; // Isssue the SRES command strobe
+    SPIC_DATA = CC112X_SRES; // Isssue the SRES command strobe
 	while(!(SPIC_STATUS & PIN7_bm));
 	x = SPIC_DATA; // flush SPDR
 
@@ -532,11 +508,45 @@ void transmit_string_USART(char *string)
 	}
 }
 
-void ccxxx0_Setup(const RF_SETTINGS* settings)
+void ccxxx0_Setup()//const RF_SETTINGS* settings)
 {
 	unsigned char read;
 	// Write register settings
-	ccxxx0_Write(CCxxx0_IOCFG0,   settings->IOCFG0); // Write the register value at its address
+	
+	//writeByte = 0x08;
+	ccxxx0_Write(CC112X_IOCFG3, 0x08);
+	//writeByte = 0x09;
+	ccxxx0_Write(CC112X_IOCFG2, 0x09);
+	//writeByte = 0x30;
+	ccxxx0_Write(CC112X_IOCFG0, 0x30);
+	//writeByte = 0x08;
+	ccxxx0_Write(CC112X_SYNC_CFG1, 0x08);
+	//writeByte = 0x00;
+	ccxxx0_Write(CC112X_PREAMBLE_CFG1, 0x00);
+	//writeByte = 0x06;
+	ccxxx0_Write(CC112X_MDMCFG1, 0x06);
+	//writeByte = 0x0A;
+	ccxxx0_Write(CC112X_MDMCFG0, 0x0A);
+	//writeByte = 0xA9;
+	ccxxx0_Write(CC112X_AGC_CFG1, 0xA9);
+	//writeByte = 0x05;
+	ccxxx0_Write(CC112X_PKT_CFG2, 0x05);
+	//writeByte = 0x00;
+	ccxxx0_Write(CC112X_PKT_CFG1, 0x00);
+	//writeByte = 0x08;
+	ccxxx0_Write(CC112X_SERIAL_STATUS, 0x08);
+	ccxxx0_Write(CC112X_MODCFG_DEV_E, 0x29);
+	ccxxx0_Write(CC112X_FREQ_IF_CFG, 0x50);
+	ccxxx0_Write(CC112X_SYMBOL_RATE2, 0x48);
+	ccxxx0_Write(CC112X_SYMBOL_RATE1, 0x93);
+	ccxxx0_Write(CC112X_SYMBOL_RATE0, 0x75);
+	ccxxx0_Write(CC112X_FS_CFG, 0x7E);
+	ccxxx0_Write(CC112X_PA_CFG0, 0x7E);
+	ccxxx0_Write(CC112X_FREQ2, 0x6D);
+	ccxxx0_Write(CC112X_FREQ1, 0x7D);
+	ccxxx0_Write(CC112X_FREQ0, 0x81);
+	
+	/*ccxxx0_Write(CCxxx0_IOCFG0,   settings->IOCFG0); // Write the register value at its address
 	read = ccxxx0_Read(CCxxx0_IOCFG0); // Read the written register back and send it through UART
 	transmit_USART(read);// Send the read value through UART
 	ccxxx0_Write(CCxxx0_FIFOTHR,  settings->FIFOTHR);
@@ -602,7 +612,7 @@ void ccxxx0_Setup(const RF_SETTINGS* settings)
 	transmit_USART(read);
 	ccxxx0_Write(CCxxx0_TEST0,    settings->TEST0);
 	read = ccxxx0_Read(CCxxx0_TEST0);
-	transmit_USART(read);
+	transmit_USART(read);*/
 }
 
 
@@ -617,19 +627,19 @@ void CC_Transmit(unsigned int pkt_length)
 		data_transmit[i] =  address[i];
 	}
 
-	ccxxx0_Strobe(CCxxx0_SIDLE);//Exit RX / TX, turn off frequency synthesizer and exit Wake-On-Radio mode if applicable
-	ccxxx0_WriteBurst(CCxxx0_PATABLE, &paTable[0], 1); // max power
-	ccxxx0_Strobe(CCxxx0_SFTX); // flush tx buff
+	ccxxx0_Strobe(CC112X_SIDLE);//Exit RX / TX, turn off frequency synthesizer and exit Wake-On-Radio mode if applicable
+	//ccxxx0_WriteBurst(CCxxx0_PATABLE, &paTable[0], 1); // max power
+	ccxxx0_Strobe(CC112X_SFTX); // flush tx buff
 
-	ccxxx0_Strobe(CCxxx0_STX); // goto tx mode
-	ccxxx0_WriteBurst(CCxxx0_TXFIFO, (unsigned char*)data_transmit,61); // addr=M, payload=4 bytes, Total PKTLEN=5//see cc1101 datasheet pg no.-40
+	ccxxx0_Strobe(CC112X_SFTX); // goto tx mode
+	ccxxx0_WriteBurst(CC112X_BURST_TXFIFO, (unsigned char*)data_transmit,61); // addr=M, payload=4 bytes, Total PKTLEN=5//see cc1101 datasheet pg no.-40
 	//ccxxx0_ReadBurst(CCxxx0_TXFIFO, (unsigned char*)data_transmit,35);
 	if(data_transmit[60]==0x7E){PORTE.OUT = 0xAA;};
 	_delay_ms(5);
 	//ccxxx0_Strobe(CCxxx0_STX); // goto tx mode
 	_delay_ms(75);// initially 120ms
 
-	ccxxx0_Strobe(CCxxx0_SIDLE);
+	ccxxx0_Strobe(CC112X_SIDLE);
 	_delay_ms(10);
 	PORTE.OUT = 0x00;
 	//transmit_string_USART("transmitted Data: ");
@@ -684,7 +694,7 @@ int main(void)
 	PORTE.OUT = 0x00;
 	ccxxx0_PowerOnReset();
 	//transmit_string_USART("cc1101_Setup\r\n");
-	ccxxx0_Setup(&rfSettings);
+	ccxxx0_Setup(); //&rfSettings);
 	uint8_t buf[80];
 	unsigned char test_data[34];
 	memcpy(buf, "IITBOMBAYPRATHAMIITBOMBAYADVITIYXX", 34);
