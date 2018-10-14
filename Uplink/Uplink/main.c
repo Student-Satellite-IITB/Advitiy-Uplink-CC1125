@@ -25,6 +25,8 @@
 #include "pmic_driver.h"
 #include "spi_driver.h"
 #include "spi_driver.c"
+#include "cc112x_spi.h"
+//#include "cc112x_serial_mode_reg_config.h"
 //#include <uart.c>
 //Global Variable
 unsigned char data_transmit[61],data_receive[60] ,transmit_enable=0,receive_enable=1,SWITCH[8]="$SWITCH",switch_num=0,transmit_check=0;
@@ -211,7 +213,7 @@ void ccxxx0_PowerOnReset();
 // Power on reset. The manual reset is choosed.
 //The exact details of manual reset on page 51 datasheet.
 
-void ccxxx0_Setup(const RF_SETTINGS*);
+void ccxxx0_Setup(); //const RF_SETTINGS*);
 // Write all the RF Settings Registers one by one. And echo to Computer using USART
 
 void SPI_Master_Init(void);
@@ -536,77 +538,111 @@ void transmit_string_USART(char *string)
 	}
 }
 
-void ccxxx0_Setup(const RF_SETTINGS* settings)			// - DONE
+void ccxxx0_Setup()//const RF_SETTINGS* settings)
 {
 	unsigned char read;
 	// Write register settings
-	ccxxx0_Write(CCxxx0_IOCFG0,   settings->IOCFG0);
-	read = ccxxx0_Read(CCxxx0_IOCFG0);
-	//transmit_USART(read);
+	
+	//writeByte = 0x08;
+	ccxxx0_Write(CC112X_IOCFG3, 0x08);
+	//writeByte = 0x09;
+	ccxxx0_Write(CC112X_IOCFG2, 0x09);
+	//writeByte = 0x30;
+	ccxxx0_Write(CC112X_IOCFG0, 0x30);
+	//writeByte = 0x08;
+	ccxxx0_Write(CC112X_SYNC_CFG1, 0x08);
+	//writeByte = 0x00;
+	ccxxx0_Write(CC112X_PREAMBLE_CFG1, 0x00);
+	//writeByte = 0x06;
+	ccxxx0_Write(CC112X_MDMCFG1, 0x06);
+	//writeByte = 0x0A;
+	ccxxx0_Write(CC112X_MDMCFG0, 0x0A);
+	//writeByte = 0xA9;
+	ccxxx0_Write(CC112X_AGC_CFG1, 0xA9);
+	//writeByte = 0x05;
+	ccxxx0_Write(CC112X_PKT_CFG2, 0x05);
+	//writeByte = 0x00;
+	ccxxx0_Write(CC112X_PKT_CFG1, 0x00);
+	//writeByte = 0x08;
+	ccxxx0_Write(CC112X_SERIAL_STATUS, 0x08);
+	ccxxx0_Write(CC112X_MODCFG_DEV_E, 0x29);
+	ccxxx0_Write(CC112X_FREQ_IF_CFG, 0x50);
+	ccxxx0_Write(CC112X_SYMBOL_RATE2, 0x48);
+	ccxxx0_Write(CC112X_SYMBOL_RATE1, 0x93);
+	ccxxx0_Write(CC112X_SYMBOL_RATE0, 0x75);
+	ccxxx0_Write(CC112X_FS_CFG, 0x7E);
+	ccxxx0_Write(CC112X_PA_CFG0, 0x7E);
+	ccxxx0_Write(CC112X_FREQ2, 0x6D);
+	ccxxx0_Write(CC112X_FREQ1, 0x7D);
+	ccxxx0_Write(CC112X_FREQ0, 0x81);
+	
+	/*ccxxx0_Write(CCxxx0_IOCFG0,   settings->IOCFG0); // Write the register value at its address
+	read = ccxxx0_Read(CCxxx0_IOCFG0); // Read the written register back and send it through UART
+	transmit_USART(read);// Send the read value through UART
 	ccxxx0_Write(CCxxx0_FIFOTHR,  settings->FIFOTHR);
 	read = ccxxx0_Read(CCxxx0_FIFOTHR);
-	//transmit_USART(read);
+	transmit_USART(read);
 	ccxxx0_Write(CCxxx0_PKTCTRL0, settings->PKTCTRL0);
 	read = ccxxx0_Read(CCxxx0_PKTCTRL0);
-	//transmit_USART(read);
+	transmit_USART(read);
 	ccxxx0_Write(CCxxx0_FSCTRL1,  settings->FSCTRL1);
 	read = ccxxx0_Read(CCxxx0_FSCTRL1);
-	//transmit_USART(read);
+	transmit_USART(read);
 	//ccxxx0_Write(CCxxx0_FSCTRL0,  settings->FSCTRL0);
 	ccxxx0_Write(CCxxx0_FREQ2,    settings->FREQ2);
 	read = ccxxx0_Read(CCxxx0_FREQ2);
-	//transmit_USART(read);
+	transmit_USART(read);
 	ccxxx0_Write(CCxxx0_FREQ1,    settings->FREQ1);
 	read = ccxxx0_Read(CCxxx0_FREQ1);
-	//transmit_USART(read);
+	transmit_USART(read);
 	ccxxx0_Write(CCxxx0_FREQ0,    settings->FREQ0);
 	read = ccxxx0_Read(CCxxx0_FREQ0);
-	//transmit_USART(read);
+	transmit_USART(read);
 	ccxxx0_Write(CCxxx0_MDMCFG4,  settings->MDMCFG4);
 	read = ccxxx0_Read(CCxxx0_MDMCFG4);
-	//transmit_USART(read);
+	transmit_USART(read);
 	ccxxx0_Write(CCxxx0_MDMCFG3,  settings->MDMCFG3);
 	read = ccxxx0_Read(CCxxx0_MDMCFG3);
-	//transmit_USART(read);
+	transmit_USART(read);
 	ccxxx0_Write(CCxxx0_MDMCFG2,  settings->MDMCFG2);
 	read = ccxxx0_Read(CCxxx0_MDMCFG2);
-	//transmit_USART(read);
+	transmit_USART(read);
 	//ccxxx0_Write(CCxxx0_MDMCFG1,  settings->MDMCFG1);
 	//ccxxx0_Write(CCxxx0_MDMCFG0,  settings->MDMCFG0);
 	ccxxx0_Write(CCxxx0_DEVIATN,  settings->DEVIATN);
 	read = ccxxx0_Read(CCxxx0_DEVIATN);
-	//transmit_USART(read);
+	transmit_USART(read);
 	ccxxx0_Write(CCxxx0_MCSM0 ,   settings->MCSM0 );
 	read = ccxxx0_Read(CCxxx0_MCSM0);
-	//transmit_USART(read);
+	transmit_USART(read);
 	ccxxx0_Write(CCxxx0_FOCCFG,   settings->FOCCFG);
 	read = ccxxx0_Read(CCxxx0_FOCCFG);
-	//transmit_USART(read);
+	transmit_USART(read);
 	//ccxxx0_Write(CCxxx0_BSCFG,    settings->BSCFG);
 	ccxxx0_Write(CCxxx0_WORCTRL,  settings->WORCTRL);
 	read = ccxxx0_Read(CCxxx0_WORCTRL);
-	//transmit_USART(read);
+	transmit_USART(read);
 	ccxxx0_Write(CCxxx0_FSCAL3,   settings->FSCAL3);
 	read = ccxxx0_Read(CCxxx0_FSCAL3);
-	//transmit_USART(read);
+	transmit_USART(read);
 	ccxxx0_Write(CCxxx0_FSCAL2,   settings->FSCAL2);
 	read = ccxxx0_Read(CCxxx0_FSCAL2);
-	//transmit_USART(read);
+	transmit_USART(read);
 	ccxxx0_Write(CCxxx0_FSCAL1,   settings->FSCAL1);
 	read = ccxxx0_Read(CCxxx0_FSCAL1);
-	//transmit_USART(read);
+	transmit_USART(read);
 	ccxxx0_Write(CCxxx0_FSCAL0,   settings->FSCAL0);
 	read = ccxxx0_Read(CCxxx0_FSCAL0);
-	//transmit_USART(read);
+	transmit_USART(read);
 	ccxxx0_Write(CCxxx0_TEST2,    settings->TEST2);
 	read = ccxxx0_Read(CCxxx0_TEST2);
-	//transmit_USART(read);
+	transmit_USART(read);
 	ccxxx0_Write(CCxxx0_TEST1,    settings->TEST1);
 	read = ccxxx0_Read(CCxxx0_TEST1);
-	//transmit_USART(read);
+	transmit_USART(read);
 	ccxxx0_Write(CCxxx0_TEST0,    settings->TEST0);
 	read = ccxxx0_Read(CCxxx0_TEST0);
-	//transmit_USART(read);
+	transmit_USART(read);*/
 }
 
 
@@ -751,7 +787,7 @@ int main(void) {
 	//PORTC=0x01;
 //	_delay_ms(1000);
 	//transmit_string_USART((unsigned char *)"cc1101_Setup\r\n");
-	ccxxx0_Setup(&rfSettings);
+	ccxxx0_Setup(); //&rfSettings);
 	//transmit_string_USART((unsigned char *)"Started\r\n");
 	unsigned char part = 'b';
 	part = ccxxx0_Read(CCxxx0_VERSION);
